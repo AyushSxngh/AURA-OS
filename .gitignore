@@ -1,0 +1,32 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+
+# Distribution packages (Use GitHub Releases for distributing binaries)
+dist/
+
+# OS and Editor artifacts
+.DS_Store
+Thumbs.db
+[Dd]esktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test screen captures and temporary logs
+tests/*.png
+tests/*.txt
+tests/system/
+*.log
+*.tmp
+crashdata/
+
+# Android & Gradle artifacts
+.gradle/
+**/build/
+tools/gradle/
+captures/
+.externalNativeBuild/
+.cxx/
+local.properties
