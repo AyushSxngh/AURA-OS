@@ -72,13 +72,6 @@ flowchart TD
 
 ## 📊 Hardware Specifications
 
-| Parameter | Configuration | Verification Method |
-| :--- | :--- | :--- |
-| **Android Version** | Android 14 (API level 34, `x86_64`) | `ro.build.version.release = 14` |
-| **RAM Allocation** | 8,192 MB (8 GB) | `free -m` (7,947 MB total) |
-| **Storage Partition** | 32 GB Virtual Disk | `df -h /data` (31 GB available) |
-| **CPU Allocation** | 6 Physical Cores | `nproc` (6 active cores) |
-| **Display Mode** | 1920 x 1080 Landscape @ 240 DPI | `dumpsys display` |
 | Parameter | Windows Configuration | macOS Apple Silicon (M1-M5) |
 | :--- | :--- | :--- |
 | **Android Version** | Android 14 (API 34, `x86_64`) | Android 14 (API 34, `arm64-v8a`) |
