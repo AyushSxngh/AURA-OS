@@ -31,15 +31,21 @@ pub struct VirtualDeviceConfig {
 
 impl Default for VirtualDeviceConfig {
     fn default() -> Self {
+        let (name, abi) = if cfg!(target_arch = "aarch64") {
+            ("AURA_OS_ARM64".to_string(), GuestAbi::Arm64V8a)
+        } else {
+            ("AURA_OS_x86_64".to_string(), GuestAbi::X86_64)
+        };
+
         Self {
-            name: "AURA_OS_x86_64".to_string(),
+            name,
             ram_mb: 8192,
             cpu_cores: 6,
             width: 1920,
             height: 1080,
             density_dpi: 240,
             disk_size_mb: 32768,
-            abi: GuestAbi::X86_64,
+            abi,
             graphics_backend: GraphicsBackend::Host,
             enable_camera: true,
             enable_audio: true,

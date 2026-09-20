@@ -4,12 +4,12 @@
 
 ![AURA OS Logo](launcher/ui/assets/icon.png)
 
-**High-Performance • 120 FPS Direct GPU Acceleration • Google Play Certified • Windows Hypervisor Platform (WHPX)**
+**High-Performance • 120 FPS Direct GPU Acceleration • Google Play Certified • Windows (WHPX) & macOS (Apple Silicon HVF)**
 
 [![Rust](https://img.shields.io/badge/Rust-1.78%2B-orange.svg)](https://www.rust-lang.org/)
 [![Android](https://img.shields.io/badge/Android-14.0%20(API%2034)-green.svg)](https://developer.android.com/)
 [![License](https://img.shields.io/badge/License-MIT%2FApache--2.0-blue.svg)](#license)
-[![Platform](https://img.shields.io/badge/Platform-Windows%20x86--64-informational.svg)](#)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20Apple%20Silicon-informational.svg)](#)
 
 </div>
 
@@ -17,9 +17,11 @@
 
 ## 🌟 Overview
 
-**AURA OS** is a native, high-performance Android virtualization and multi-instance management platform engineered in Rust for Windows 10/11. Built from the ground up for power users, developers, and mobile gamers, AURA OS delivers a desktop-class Android 14 experience running at **120 FPS** with direct host GPU hardware acceleration.
+**AURA OS** is a native, high-performance Android virtualization and multi-instance management platform engineered in Rust for **Windows 10/11** and **macOS (Apple Silicon M1–M5 & Intel)**. Built from the ground up for power users, developers, and mobile gamers, AURA OS delivers a desktop-class Android 14 experience running at **120 FPS** with direct host GPU hardware acceleration.
 
-Unlike traditional heavy emulators that suffer from high input lag and bloated background services, AURA OS utilizes a **Single-Window Architecture**: the management GUI operates as a sleek, low-overhead dashboard while the Android virtual machine executes in its own dedicated, frameless 1080p landscape viewport directly on your NVIDIA/AMD/Intel GPU.
+On **Apple Silicon Macs (M1/M2/M3/M4/M5)**, AURA OS runs **100% natively on ARM64** with zero binary translation lag using Apple's native **Hypervisor.framework (HVF)** and Metal graphics acceleration.
+
+Unlike traditional heavy emulators that suffer from high input lag and bloated background services, AURA OS utilizes a **Single-Window Architecture**: the management GUI operates as a sleek, low-overhead dashboard while the Android virtual machine executes in its own dedicated, frameless 1080p landscape viewport directly on your host GPU.
 
 ---
 
@@ -77,22 +79,40 @@ flowchart TD
 | **Storage Partition** | 32 GB Virtual Disk | `df -h /data` (31 GB available) |
 | **CPU Allocation** | 6 Physical Cores | `nproc` (6 active cores) |
 | **Display Mode** | 1920 x 1080 Landscape @ 240 DPI | `dumpsys display` |
-| **Refresh Rate** | 120.0 Hz VSync | `hw.lcd.vsync = 120` |
-| **Hypervisor** | Windows Hypervisor Platform (WHPX) | Native Windows API |
-| **Boot System** | QuickBoot Snapshot (~3.2s) | `ram.img` state serialization |
+| Parameter | Windows Configuration | macOS Apple Silicon (M1-M5) |
+| :--- | :--- | :--- |
+| **Android Version** | Android 14 (API 34, `x86_64`) | Android 14 (API 34, `arm64-v8a`) |
+| **RAM Allocation** | 8,192 MB (8 GB) | 6,144 MB – 8,192 MB Unified RAM |
+| **Storage Partition** | 32 GB Virtual Disk | 32 GB APFS Virtual Disk |
+| **CPU Allocation** | 6 Physical Cores | 4 – 6 Performance/Efficiency Cores |
+| **Display Mode** | 1920 x 1080 Landscape @ 240 DPI | 1920 x 1080 Retina Landscape @ 240 DPI |
+| **Refresh Rate** | 120.0 Hz VSync | 60 Hz / 120 Hz ProMotion VSync |
+| **Hypervisor** | Windows Hypervisor Platform (WHPX) | Apple Hypervisor Framework (HVF) |
+| **Graphics Backend** | Host GPU (DirectX / Vulkan `skiagl`) | Host GPU (Apple Metal `skiagl`) |
+| **Boot System** | QuickBoot Snapshot (~3.2s) | QuickBoot Snapshot (~2.1s) |
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-- Windows 10 or Windows 11 (64-bit)
-- Windows Hypervisor Platform enabled (`dism /Online /Enable-Feature /All /FeatureName:HypervisorPlatform`)
-- Android SDK with Platform-Tools and Emulator
+### On Windows
+1. Double-click **`Launch-AURA-OS.bat`** (or open `bin/aura-gui.exe`).
+2. Click **▶ START AURA OS**.
 
-### Building from Source
+### On macOS (Apple Silicon M1/M2/M3/M4/M5)
+1. Read the comprehensive [macOS Setup Guide](docs/MACOS_SETUP.md).
+2. Run the automated Mac setup:
+   ```bash
+   chmod +x Launch-AURA-OS.command tools/setup-mac.sh
+   ./tools/setup-mac.sh
+   ```
+3. Double-click **`Launch-AURA-OS.command`** in Finder to start!
 
-```powershell
+---
+
+## 🛠 Building from Source
+
+```bash
 # Clone the repository
 git clone https://github.com/AyushSxngh/AURA-OS.git
 cd AURA-OS
@@ -102,14 +122,7 @@ cargo check --workspace
 
 # Build optimized release binaries
 cargo build --release --workspace
-
-# Package distribution bundle
-python tools/package.py
 ```
-
-### Launching AURA OS
-
-Double-click **`Launch-AURA-OS.bat`** (or open `bin/aura-gui.exe`) to launch the modern interactive dashboard, then click **▶ START AURA OS**.
 
 ---
 

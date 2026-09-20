@@ -532,7 +532,9 @@ impl eframe::App for AuraGuiApp {
 
                 // Status Pill
                 if is_running {
-                    ui.label(egui::RichText::new("● ONLINE (WHPX • Vulkan • 60 FPS)").color(egui::Color32::from_rgb(34, 197, 94)).size(11.0).strong());
+                    let hv = self.status_report.accel.hypervisor.short_name();
+                    let gfx = if cfg!(target_os = "macos") { "Metal" } else { "Vulkan" };
+                    ui.label(egui::RichText::new(format!("● ONLINE ({} • {} • 120 FPS)", hv, gfx)).color(egui::Color32::from_rgb(34, 197, 94)).size(11.0).strong());
                 } else if self.is_booting {
                     ui.label(egui::RichText::new("⏳ BOOTING...").color(egui::Color32::from_rgb(234, 179, 8)).size(11.0).strong());
                 } else {
@@ -902,8 +904,13 @@ impl eframe::App for AuraGuiApp {
                     ui.label(format!("OS: {:?} ({})", self.status_report.host.os, self.status_report.host.os_version));
                     ui.label(format!("CPU: {} ({} Cores)", self.status_report.host.cpu_brand, self.status_report.host.logical_cores));
                     ui.label(format!("Host RAM: {} MB", self.status_report.host.total_memory_mb));
-                    ui.label("Hypervisor: WHPX (Windows Hypervisor Platform) Active & Operational");
-                    ui.label("Guest Hardware Renderer: skiagl (Vulkan Host Translation)");
+                    ui.label(format!("Hypervisor: {} Active & Operational", self.status_report.accel.hypervisor.display_name()));
+                    let renderer_desc = if cfg!(target_os = "macos") {
+                        "Guest Hardware Renderer: skiagl (Apple Metal Host Translation)"
+                    } else {
+                        "Guest Hardware Renderer: skiagl (Vulkan Host Translation)"
+                    };
+                    ui.label(renderer_desc);
                     ui.separator();
                     ui.label(egui::RichText::new("SDK Toolchain").strong());
                     ui.label(format!("ADB: {}", self.status_report.toolchain.adb_path.as_ref().map(|p| p.display().to_string()).unwrap_or("Not found".into())));
@@ -1118,7 +1125,11 @@ impl eframe::App for AuraGuiApp {
                         .rounding(8.0)
                         .inner_margin(egui::Margin::symmetric(24.0, 10.0))
                         .show(ui, |ui| {
-                            ui.label(egui::RichText::new("6 Physical Cores • 8192 MB RAM • 32 GB Storage • 120 Hz VSync • NVIDIA GeForce GTX 1650 • WHPX").size(12.0).weak());
+                            let cores = self.status_report.host.physical_cores.unwrap_or(self.status_report.host.logical_cores);
+                            let hv = self.status_report.accel.hypervisor.short_name();
+                            let cpu_label = if cfg!(target_os = "macos") { "Apple Silicon" } else { &self.status_report.host.cpu_brand };
+                            let ribbon_text = format!("{} Cores • 8192 MB RAM • 32 GB Storage • 120 Hz VSync • {} • {}", cores, cpu_label, hv);
+                            ui.label(egui::RichText::new(ribbon_text).size(12.0).weak());
                         });
                 });
             } else {
@@ -1196,7 +1207,9 @@ impl eframe::App for AuraGuiApp {
                         });
 
                         ui.add_space(12.0);
-                        ui.label(egui::RichText::new("WHPX Hypervisor • 6 Cores • 1920x1080 @ 240 DPI • Google Play Certified").weak().size(12.0));
+                        let hv = self.status_report.accel.hypervisor.short_name();
+                        let cores = self.status_report.host.physical_cores.unwrap_or(self.status_report.host.logical_cores);
+                        ui.label(egui::RichText::new(format!("{} Hypervisor • {} Cores • 1920x1080 @ 240 DPI • Google Play Certified", hv, cores)).weak().size(12.0));
                     }
                 });
             }

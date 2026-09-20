@@ -9,6 +9,28 @@ pub enum HypervisorType {
     None,
 }
 
+impl HypervisorType {
+    pub fn display_name(&self) -> &'static str {
+        match self {
+            HypervisorType::Whpx => "WHPX (Windows Hypervisor Platform)",
+            HypervisorType::Hvf => "Apple HVF (Hypervisor.framework)",
+            HypervisorType::Kvm => "KVM (Kernel Virtual Machine)",
+            HypervisorType::Haxm => "Intel HAXM",
+            HypervisorType::None => "Software Emulation",
+        }
+    }
+
+    pub fn short_name(&self) -> &'static str {
+        match self {
+            HypervisorType::Whpx => "WHPX",
+            HypervisorType::Hvf => "Apple HVF",
+            HypervisorType::Kvm => "KVM",
+            HypervisorType::Haxm => "HAXM",
+            HypervisorType::None => "TCG/Software",
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccelInfo {
     pub hypervisor: HypervisorType,

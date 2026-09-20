@@ -17,12 +17,7 @@ impl PlatformStatusReport {
     pub fn fast_detect() -> Self {
         let host = HostInfo::detect();
         let toolchain = ToolchainInfo::fast_detect();
-        let accel = AccelInfo {
-            hypervisor: HypervisorType::Whpx,
-            is_supported: true,
-            is_enabled: true,
-            details: "WHPX / Hardware Virtualization Platform available.".to_string(),
-        };
+        let accel = AccelInfo::detect(None);
 
         let is_ready = toolchain.sdk_root.is_some() && toolchain.adb_path.is_some() && toolchain.emulator_path.is_some();
 

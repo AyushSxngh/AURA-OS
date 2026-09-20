@@ -64,16 +64,31 @@ impl ToolchainInfo {
 
     fn find_jdk_path_fast() -> Option<PathBuf> {
         let java_exe = if cfg!(target_os = "windows") { "java.exe" } else { "java" };
-        let jbr_candidate = PathBuf::from("C:\\Program Files\\Android\\Android Studio\\jbr\\bin").join(java_exe);
-        if jbr_candidate.exists() {
-            return Some(jbr_candidate);
+        
+        // Windows Android Studio JBR
+        let jbr_win = PathBuf::from("C:\\Program Files\\Android\\Android Studio\\jbr\\bin").join(java_exe);
+        if jbr_win.exists() {
+            return Some(jbr_win);
         }
+
+        // macOS Android Studio JBR
+        let jbr_mac = PathBuf::from("/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin").join(java_exe);
+        if jbr_mac.exists() {
+            return Some(jbr_mac);
+        }
+
         if let Ok(val) = std::env::var("JAVA_HOME") {
             let candidate = PathBuf::from(val).join("bin").join(java_exe);
             if candidate.exists() {
                 return Some(candidate);
             }
         }
+
+        let usr_bin = PathBuf::from("/usr/bin/java");
+        if usr_bin.exists() {
+            return Some(usr_bin);
+        }
+
         None
     }
 
@@ -120,13 +135,24 @@ impl ToolchainInfo {
                 return Some(p);
             }
         }
-        let home = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")).ok()?;
-        let p = PathBuf::from(home).join("AppData").join("Local").join("Android").join("Sdk");
-        if p.exists() {
-            Some(p)
-        } else {
-            None
+        if let Ok(home) = std::env::var("USERPROFILE").or_else(|_| std::env::var("HOME")) {
+            // macOS default SDK path
+            let mac_path = PathBuf::from(&home).join("Library").join("Android").join("sdk");
+            if mac_path.exists() {
+                return Some(mac_path);
+            }
+            // Linux default SDK path
+            let linux_path = PathBuf::from(&home).join("Android").join("Sdk");
+            if linux_path.exists() {
+                return Some(linux_path);
+            }
+            // Windows default fallback
+            let win_path = PathBuf::from(&home).join("AppData").join("Local").join("Android").join("Sdk");
+            if win_path.exists() {
+                return Some(win_path);
+            }
         }
+        None
     }
 
     fn find_adb(sdk_root: &Option<PathBuf>) -> (Option<PathBuf>, Option<String>) {
@@ -188,11 +214,18 @@ impl ToolchainInfo {
     fn find_jdk() -> (Option<PathBuf>, Option<String>) {
         let java_exe = if cfg!(target_os = "windows") { "java.exe" } else { "java" };
         
-        // Check Android Studio JBR path first
-        let jbr_candidate = PathBuf::from("C:\\Program Files\\Android\\Android Studio\\jbr\\bin").join(java_exe);
-        if jbr_candidate.exists() {
-            let ver = Self::get_java_version(&jbr_candidate);
-            return (Some(jbr_candidate), ver);
+        // Check Windows Android Studio JBR path
+        let jbr_win = PathBuf::from("C:\\Program Files\\Android\\Android Studio\\jbr\\bin").join(java_exe);
+        if jbr_win.exists() {
+            let ver = Self::get_java_version(&jbr_win);
+            return (Some(jbr_win), ver);
+        }
+
+        // Check macOS Android Studio JBR path
+        let jbr_mac = PathBuf::from("/Applications/Android Studio.app/Contents/jbr/Contents/Home/bin").join(java_exe);
+        if jbr_mac.exists() {
+            let ver = Self::get_java_version(&jbr_mac);
+            return (Some(jbr_mac), ver);
         }
 
         // Check JAVA_HOME
@@ -202,6 +235,13 @@ impl ToolchainInfo {
                 let ver = Self::get_java_version(&candidate);
                 return (Some(candidate), ver);
             }
+        }
+
+        // Check system java
+        let usr_bin = PathBuf::from("/usr/bin/java");
+        if usr_bin.exists() {
+            let ver = Self::get_java_version(&usr_bin);
+            return (Some(usr_bin), ver);
         }
 
         (None, None)

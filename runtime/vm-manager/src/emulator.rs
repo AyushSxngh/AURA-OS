@@ -157,30 +157,45 @@ impl AuraVmManager {
                 .map_err(|e| EmulatorError::CreationFailed(format!("Failed to create AVD directory: {}", e)))?;
         }
 
-        // Check whether google_apis_playstore or google_apis exists
+        let is_arm = config.abi == aura_launcher_core::GuestAbi::Arm64V8a || cfg!(target_arch = "aarch64");
+        let (abi_type, cpu_arch, arch_dir) = if is_arm {
+            ("arm64-v8a", "arm64", "arm64-v8a")
+        } else {
+            ("x86_64", "x86_64", "x86_64")
+        };
+
+        // Check whether google_apis_playstore or google_apis exists for this architecture
         let (sysdir, tag_id, tag_display, has_playstore) = if let Some(sdk) = &self.sdk_root {
-            let playstore_path = sdk.join("system-images").join("android-34").join("google_apis_playstore").join("x86_64");
+            let playstore_path = sdk.join("system-images").join("android-34").join("google_apis_playstore").join(arch_dir);
+            let google_apis_path = sdk.join("system-images").join("android-34").join("google_apis").join(arch_dir);
+
             if playstore_path.exists() {
                 let mut p = playstore_path.display().to_string();
                 if !p.ends_with(std::path::MAIN_SEPARATOR) {
                     p.push(std::path::MAIN_SEPARATOR);
                 }
                 (p, "google_apis_playstore", "Google Play", true)
+            } else if google_apis_path.exists() {
+                let mut p = google_apis_path.display().to_string();
+                if !p.ends_with(std::path::MAIN_SEPARATOR) {
+                    p.push(std::path::MAIN_SEPARATOR);
+                }
+                (p, "google_apis", "Google APIs", false)
             } else {
-                let rel = format!("system-images{}android-34{}google_apis{}x86_64{}",
+                let rel = format!("system-images{}android-34{}google_apis_playstore{}{}",
                     std::path::MAIN_SEPARATOR, std::path::MAIN_SEPARATOR,
                     std::path::MAIN_SEPARATOR, std::path::MAIN_SEPARATOR);
-                (format!("{}{}", sdk.display(), std::path::MAIN_SEPARATOR) + &rel, "google_apis", "Google APIs", false)
+                (format!("{}{}", sdk.display(), std::path::MAIN_SEPARATOR) + &rel, "google_apis_playstore", "Google Play", true)
             }
         } else {
-            (String::new(), "google_apis", "Google APIs", false)
+            (String::new(), "google_apis_playstore", "Google Play", true)
         };
 
         let config_ini_path = avd_dir.join("config.ini");
         let ini_content = format!(
             "AvdId={name}
 PlayStore.enabled={playstore}
-abi.type=x86_64
+abi.type={abi_type}
 avd.ini.displayname={name}
 avd.ini.encoding=UTF-8
 disk.dataPartition.size={disk}M
@@ -194,7 +209,7 @@ hw.audioOutput=yes
 hw.battery=yes
 hw.camera.back=webcam0
 hw.camera.front=webcam0
-hw.cpu.arch=x86_64
+hw.cpu.arch={cpu_arch}
 hw.cpu.ncore={cores}
 hw.dPad=no
 hw.device.manufacturer=AURA OS Platform
@@ -226,6 +241,8 @@ vm.heapSize=1024
 ",
             name = avd_name,
             playstore = if has_playstore { "true" } else { "false" },
+            abi_type = abi_type,
+            cpu_arch = cpu_arch,
             disk = config.disk_size_mb,
             cores = config.cpu_cores,
             dpi = config.density_dpi,
@@ -321,16 +338,21 @@ vm.heapSize=1024
     pub fn clone_avd(&self, _src_name: &str, new_name: &str) -> Result<(), EmulatorError> {
         let mut config = VirtualDeviceConfig::default();
         config.name = new_name.to_string();
+        let is_arm = cfg!(target_arch = "aarch64") || config.abi == aura_launcher_core::GuestAbi::Arm64V8a;
+        let arch_str = if is_arm { "arm64-v8a" } else { "x86_64" };
+
         let pkg = if let Some(sdk) = &self.sdk_root {
-            if sdk.join("system-images").join("android-34").join("google_apis_playstore").join("x86_64").exists() {
-                "system-images;android-34;google_apis_playstore;x86_64"
+            if sdk.join("system-images").join("android-34").join("google_apis_playstore").join(arch_str).exists() {
+                format!("system-images;android-34;google_apis_playstore;{}", arch_str)
+            } else if sdk.join("system-images").join("android-34").join("google_apis").join(arch_str).exists() {
+                format!("system-images;android-34;google_apis;{}", arch_str)
             } else {
-                "system-images;android-34;google_apis;x86_64"
+                format!("system-images;android-34;google_apis_playstore;{}", arch_str)
             }
         } else {
-            "system-images;android-34;google_apis;x86_64"
+            format!("system-images;android-34;google_apis_playstore;{}", arch_str)
         };
-        self.create_avd(new_name, pkg)?;
+        self.create_avd(new_name, &pkg)?;
         self.configure_avd_ini(new_name, &config)?;
         Ok(())
     }
