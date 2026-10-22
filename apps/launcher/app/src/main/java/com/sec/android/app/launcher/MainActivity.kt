@@ -1,4 +1,4 @@
-package com.aura.launcher
+package com.sec.android.app.launcher
 
 import android.content.Intent
 import android.content.pm.ResolveInfo

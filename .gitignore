@@ -26,7 +26,21 @@ crashdata/
 .gradle/
 **/build/
 tools/gradle/
+tools/gradle-8.5/
 captures/
 .externalNativeBuild/
 .cxx/
 local.properties
+
+# Python artifacts
+__pycache__/
+*.pyc
+
+# Local compiled binaries
+tools/*.dylib
+tools/qemu_dispatcher
+!tools/qemu_dispatcher.c
+
+# User data exports
+*.csv
+

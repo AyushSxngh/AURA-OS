@@ -39,12 +39,12 @@ impl Default for VirtualDeviceConfig {
 
         Self {
             name,
-            ram_mb: 8192,
-            cpu_cores: 6,
-            width: 1920,
-            height: 1080,
-            density_dpi: 240,
-            disk_size_mb: 32768,
+            ram_mb: 12288,
+            cpu_cores: 8,
+            width: 1440,
+            height: 3120,
+            density_dpi: 600,
+            disk_size_mb: 262144,
             abi,
             graphics_backend: GraphicsBackend::Host,
             enable_camera: true,

@@ -48,6 +48,10 @@ impl ToolchainInfo {
                 return Some(candidate);
             }
         }
+        let brew_candidate = PathBuf::from("/opt/homebrew/bin").join(exe_name);
+        if brew_candidate.exists() {
+            return Some(brew_candidate);
+        }
         None
     }
 
@@ -58,6 +62,10 @@ impl ToolchainInfo {
             if candidate.exists() {
                 return Some(candidate);
             }
+        }
+        let brew_candidate = PathBuf::from("/opt/homebrew/bin").join(exe_name);
+        if brew_candidate.exists() {
+            return Some(brew_candidate);
         }
         None
     }
@@ -140,6 +148,10 @@ impl ToolchainInfo {
             let mac_path = PathBuf::from(&home).join("Library").join("Android").join("sdk");
             if mac_path.exists() {
                 return Some(mac_path);
+            }
+            let brew_sdk = PathBuf::from("/opt/homebrew/share/android-commandlinetools");
+            if brew_sdk.exists() {
+                return Some(brew_sdk);
             }
             // Linux default SDK path
             let linux_path = PathBuf::from(&home).join("Android").join("Sdk");

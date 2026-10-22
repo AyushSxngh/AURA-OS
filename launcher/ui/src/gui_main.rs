@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod gui;
+pub mod http_bridge;
 
 use eframe::egui;
 use gui::AuraGuiApp;

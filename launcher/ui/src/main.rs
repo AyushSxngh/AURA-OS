@@ -26,6 +26,8 @@ fn main() {
         "packages" => list_packages(args.get(2).map(|s| s.as_str()), args.get(3).map(|s| s.as_str())),
         "push" => bridge_push(args.get(2).map(|s| s.as_str()), args.get(3).map(|s| s.as_str())),
         "pull" => bridge_pull(args.get(2).map(|s| s.as_str()), args.get(3).map(|s| s.as_str())),
+        "export-apk" => export_apk_cli(args.get(2).map(|s| s.as_str()), args.get(3).map(|s| s.as_str())),
+        "export-file" => export_file_cli(args.get(2).map(|s| s.as_str()), args.get(3).map(|s| s.as_str())),
         "clipboard" => bridge_clipboard(args.get(2).map(|s| s.as_str())),
         "screenshot" => bridge_screenshot(args.get(2).map(|s| s.as_str())),
         "benchmark" => run_benchmark(args.get(2).map(|s| s.as_str())),
@@ -147,10 +149,12 @@ fn create_device(name_opt: Option<&str>) {
         config.name = name.to_string();
     }
 
-    let sys_pkg = "system-images;android-34;google_apis;x86_64";
+    let is_arm = cfg!(target_arch = "aarch64") || config.abi == aura_launcher_core::GuestAbi::Arm64V8a;
+    let arch_str = if is_arm { "arm64-v8a" } else { "x86_64" };
+    let sys_pkg = format!("system-images;android-34;google_apis_playstore;{}", arch_str);
     println!("Creating AURA OS Virtual Device '{}' using guest package '{}'...", config.name, sys_pkg);
 
-    match vm_mgr.create_avd(&config.name, sys_pkg) {
+    match vm_mgr.create_avd(&config.name, &sys_pkg) {
         Ok(_) => println!("[SUCCESS] AVD '{}' created successfully via avdmanager.", config.name),
         Err(e) => println!("[INFO] avdmanager output / creation status: {}", e),
     }
@@ -373,6 +377,68 @@ fn bridge_pull(guest_path_opt: Option<&str>, host_dest_opt: Option<&str>) {
     }
 }
 
+fn export_apk_cli(pkg_opt: Option<&str>, dest_opt: Option<&str>) {
+    let pkg = match pkg_opt {
+        Some(p) => p,
+        None => {
+            eprintln!("Usage: aura-cli export-apk <PACKAGE_NAME> [LOCAL_DEST_PATH]");
+            return;
+        }
+    };
+    let report = PlatformStatusReport::generate();
+    let adb_path = match report.toolchain.adb_path {
+        Some(p) => p,
+        None => {
+            eprintln!("[ERROR] ADB binary not found.");
+            return;
+        }
+    };
+    let client = AuraAdbClient::new(adb_path);
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let default_dest = PathBuf::from(home).join("Desktop").join("AURA_Exported");
+    let dest_path = dest_opt.map(PathBuf::from).unwrap_or(default_dest);
+
+    println!("Locating installed APK for package '{}'...", pkg);
+    match client.export_apk(None, pkg, &dest_path) {
+        Ok(out_file) => {
+            println!("[SUCCESS] APK exported to '{}'", out_file.display());
+            let _ = aura_launcher_core::silent_command("open").arg("-R").arg(&out_file).output();
+        }
+        Err(e) => eprintln!("[ERROR] Export APK failed: {}", e),
+    }
+}
+
+fn export_file_cli(remote_path_opt: Option<&str>, dest_opt: Option<&str>) {
+    let remote_path = match remote_path_opt {
+        Some(p) => p,
+        None => {
+            eprintln!("Usage: aura-cli export-file <REMOTE_PATH> [LOCAL_DEST_PATH]");
+            return;
+        }
+    };
+    let report = PlatformStatusReport::generate();
+    let adb_path = match report.toolchain.adb_path {
+        Some(p) => p,
+        None => {
+            eprintln!("[ERROR] ADB binary not found.");
+            return;
+        }
+    };
+    let client = AuraAdbClient::new(adb_path);
+    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+    let default_dest = PathBuf::from(home).join("Desktop").join("AURA_Exported");
+    let dest_path = dest_opt.map(PathBuf::from).unwrap_or(default_dest);
+
+    println!("Exporting '{}' from guest...", remote_path);
+    match client.export_file(None, remote_path, &dest_path) {
+        Ok(out_file) => {
+            println!("[SUCCESS] File exported to '{}'", out_file.display());
+            let _ = aura_launcher_core::silent_command("open").arg("-R").arg(&out_file).output();
+        }
+        Err(e) => eprintln!("[ERROR] Export file failed: {}", e),
+    }
+}
+
 fn bridge_clipboard(text_opt: Option<&str>) {
     let text = match text_opt {
         Some(t) => t,
@@ -474,6 +540,8 @@ fn print_help() {
     println!("  packages [FILTER] [SERIAL]         List installed application packages on virtual device");
     println!("  push <SRC> <DST>                   Push file from host to guest Android");
     println!("  pull <SRC> <DST>                   Pull file from guest Android to host");
+    println!("  export-apk <PACKAGE> [DEST]        Extract and export installed APK from virtual device to host");
+    println!("  export-file <REMOTE_PATH> [DEST]   Export file or folder from virtual device to host Mac");
     println!("  clipboard <TEXT>                   Inject clipboard text into active guest");
     println!("  screenshot [OUTPUT_PNG]            Capture instant PNG screenshot of guest display");
     println!("  benchmark [SERIAL]                 Profile guest CPU, RAM, app latency, and GPU pipeline");

@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "AuraCamera"
+rootProject.name = "SamsungCamera"
 include ':app'

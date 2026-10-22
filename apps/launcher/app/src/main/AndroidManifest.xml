@@ -10,7 +10,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="AURA Desktop Launcher"
+        android:label="One UI Home"
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
         

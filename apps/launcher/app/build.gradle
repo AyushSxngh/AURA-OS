@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.aura.launcher'
+    namespace 'com.sec.android.app.launcher'
     compileSdk 34
 
     defaultConfig {
-        applicationId "com.aura.launcher"
+        applicationId "com.sec.android.app.launcher"
         minSdk 24
         targetSdk 34
         versionCode 1

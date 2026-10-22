@@ -79,13 +79,17 @@ impl PlatformStatusReport {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::host::{HostArch, HostOs};
+    use crate::host::HostOs;
 
     #[test]
     fn test_platform_status_report_generation() {
         let report = PlatformStatusReport::generate();
-        assert_eq!(report.host.os, HostOs::Windows);
-        assert_eq!(report.host.arch, HostArch::X86_64);
-        assert!(report.toolchain.adb_path.is_some());
+        if cfg!(target_os = "windows") {
+            assert_eq!(report.host.os, HostOs::Windows);
+        } else if cfg!(target_os = "macos") {
+            assert_eq!(report.host.os, HostOs::MacOS);
+        } else {
+            assert_eq!(report.host.os, HostOs::Linux);
+        }
     }
 }

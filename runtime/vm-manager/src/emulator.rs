@@ -72,6 +72,10 @@ impl AuraVmManager {
         PathBuf::from(home).join(".android").join("avd")
     }
 
+    pub fn get_avd_dir(&self, avd_name: &str) -> PathBuf {
+        self.get_avd_storage_dir().join(format!("{}.avd", avd_name))
+    }
+
     pub fn avd_exists(&self, avd_name: &str) -> bool {
         match self.list_avds() {
             Ok(avds) => avds.iter().any(|name| name.to_lowercase() == avd_name.to_lowercase()),
@@ -125,6 +129,10 @@ impl AuraVmManager {
                     if PathBuf::from(jbr_path).exists() {
                         cmd.env("JAVA_HOME", jbr_path);
                     }
+                } else if let Ok(jhome) = std::env::var("JAVA_HOME") {
+                    cmd.env("JAVA_HOME", jhome);
+                } else if PathBuf::from("/opt/homebrew/opt/openjdk@17").exists() {
+                    cmd.env("JAVA_HOME", "/opt/homebrew/opt/openjdk@17");
                 }
                 if let Ok(mut child) = cmd
                     .arg("create")
@@ -208,16 +216,17 @@ hw.audioInput=yes
 hw.audioOutput=yes
 hw.battery=yes
 hw.camera.back=webcam0
-hw.camera.front=webcam0
+hw.camera.front=webcam1
 hw.cpu.arch={cpu_arch}
 hw.cpu.ncore={cores}
 hw.dPad=no
-hw.device.manufacturer=AURA OS Platform
-hw.device.name=aura_desktop
+hw.device.manufacturer=Samsung
+hw.device.name=Galaxy S24 Ultra
+hw.device.model=SM-S928B
 hw.gps=yes
 hw.gpu.enabled=yes
-hw.gpu.mode=host
-hw.initialOrientation=Landscape
+hw.gpu.mode=swiftshader_indirect
+hw.initialOrientation=Portrait
 hw.keyboard=yes
 hw.lcd.density={dpi}
 hw.lcd.height={height}
@@ -234,7 +243,7 @@ runtime.network.latency=none
 runtime.network.speed=full
 showDeviceFrame=no
 skin.dynamic=yes
-skin.name=1920x1080
+skin.name={width}x{height}
 tag.display={tag_display}
 tag.id={tag_id}
 vm.heapSize=1024
@@ -274,14 +283,92 @@ vm.heapSize=1024
             "auto".to_string(),
             "-vsync-rate".to_string(),
             "120".to_string(),
+            "-crash-report-mode".to_string(),
+            "never".to_string(),
+            "-no-snapshot-load".to_string(),
         ];
 
+        let gpu_mode = std::env::var("AURA_GPU_MODE").unwrap_or_else(|_| "swiftshader_indirect".to_string());
         args.push("-gpu".to_string());
-        args.push("host".to_string());
+        args.push(gpu_mode);
+
+        // DNS and networking optimization for reliable host-to-guest Internet routing
+        args.push("-dns-server".to_string());
+        args.push("8.8.8.8,8.8.4.4".to_string());
+        args.push("-netdelay".to_string());
+        args.push("none".to_string());
+        args.push("-netspeed".to_string());
+        args.push("full".to_string());
+
+        // Samsung Hardware Wi-Fi and genuine host network parameters
+        if let Ok(state_str) = std::fs::read_to_string("/tmp/sec_wifi_state.json") {
+            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&state_str) {
+                if let Some(gw) = json.get("gateway").and_then(|v| v.as_str()) {
+                    let mut dhcp_ip = "10.11.12.92".to_string();
+                    if let Some(ip) = json.get("phone_ip").and_then(|v| v.as_str()) {
+                        dhcp_ip = ip.to_string();
+                    } else if let Some(ip) = json.get("mac_ip").and_then(|v| v.as_str()) {
+                        if let Some((prefix, last)) = ip.rsplit_once('.') {
+                            if let Ok(last_n) = last.parse::<u32>() {
+                                dhcp_ip = format!("{}.{}", prefix, if last_n < 250 { last_n + 1 } else { 92 });
+                            }
+                        }
+                    }
+                    let mut net_opt = format!("host={},dhcpstart={}", gw, dhcp_ip);
+                    if let Some(net_cidr) = json.get("net_cidr").and_then(|v| v.as_str()) {
+                        net_opt = format!("net={},host={},dhcpstart={}", net_cidr, gw, dhcp_ip);
+                    }
+                    args.push("-wifi-user-mode-options".to_string());
+                    args.push(net_opt);
+                }
+            }
+        }
 
         if config.enable_camera {
+            // Front camera (KYC / Selfie / CameraX): host webcam1 (MacBook Air Camera)
+            args.push("-camera-front".to_string());
+            args.push("webcam1".to_string());
+
+            // Back camera (OCR / Card scanning): host webcam0 (Iriun Camera / Mobile Phone)
             args.push("-camera-back".to_string());
             args.push("webcam0".to_string());
+        }
+
+        // Get or generate instance identity
+        let avd_dir = self.get_avd_dir(&config.name);
+        let identity = crate::identity::DeviceIdentity::load_or_generate(&avd_dir);
+
+        // Samsung Galaxy S24 Ultra Device Identity & Hardware Specifications
+        for (k, v) in [
+            ("ro.product.model", "SM-S928B"),
+            ("ro.product.manufacturer", "Samsung"),
+            ("ro.product.brand", "samsung"),
+            ("ro.product.device", "e3q"),
+            ("ro.product.name", "e3qxeea"),
+            ("ro.build.product", "e3q"),
+            ("ro.product.board", "kalama"),
+            ("ro.board.platform", "kalama"),
+            ("ro.soc.manufacturer", "Qualcomm"),
+            ("ro.soc.model", "SM8650"),
+            ("ro.serialno", &identity.serialno),
+            ("ro.build.flavor", "e3qxeea-user"),
+            ("ro.build.version.release", "16"),
+            ("ro.build.version.sdk", "34"),
+            ("ro.system.build.version.sdk", "34"),
+            ("ro.build.version.security_patch", "2026-09-05"),
+            ("qemu.sf.lcd_density", "600"),
+            ("ro.boot.verifiedbootstate", "green"),
+            ("ro.boot.flash.locked", "1"),
+            ("ro.boot.vbmeta.device_state", "locked"),
+            ("ro.boot.warranty_bit", "0"),
+            ("ro.warranty_bit", "0"),
+            ("ro.boot.veritymode", "enforcing"),
+            ("ro.hardware", "qcom"),
+            ("ro.boot.hardware", "qcom"),
+            ("ro.build.characteristics", "phone"),
+        ] {
+            args.push("-prop".to_string());
+            args.push(format!("{}={}", k, v));
         }
 
         args
@@ -354,6 +441,12 @@ vm.heapSize=1024
         };
         self.create_avd(new_name, &pkg)?;
         self.configure_avd_ini(new_name, &config)?;
+
+        // Ensure a brand new, unique device identity is generated for this new clone
+        let avd_dir = self.get_avd_dir(new_name);
+        let new_identity = crate::identity::DeviceIdentity::new_random();
+        let _ = new_identity.save_to_avd(&avd_dir);
+
         Ok(())
     }
 }
@@ -371,8 +464,9 @@ mod tests {
             let config = VirtualDeviceConfig::default();
             let args = manager.build_launch_args(&config);
             assert!(args.contains(&"-avd".to_string()));
-            assert!(args.contains(&"AURA_OS_x86_64".to_string()));
+            assert!(args.contains(&config.name));
             assert!(args.contains(&"-camera-back".to_string()));
+            assert!(args.contains(&"-camera-front".to_string()));
         }
     }
 }

@@ -1,41 +1,256 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#000000">
+    android:background="#0A0A10">
 
+    <!-- Viewfinder Layer: Direct CameraX View -->
     <androidx.camera.view.PreviewView
         android:id="@+id/viewFinder"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        app:scaleType="fitCenter"
+        android:visibility="gone" />
 
+    <!-- On-Device Live Face Swap Overlay -->
+    <ImageView
+        android:id="@+id/faceOverlayView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter"
+        android:visibility="gone" />
+
+    <!-- Viewfinder Layer: DeepFake Realtime Stream -->
+    <ImageView
+        android:id="@+id/streamView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitCenter"
+        android:contentDescription="DeepFake Viewfinder" />
+
+    <!-- Loading / Connecting Overlay -->
     <LinearLayout
+        android:id="@+id/offlineOverlay"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:background="#BB000000"
+        android:padding="24dp"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:indeterminateTint="#7C6CF7" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Camera"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/offlineMessage"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:gravity="center"
+            android:text="Starting camera..."
+            android:textColor="#BBBBCC"
+            android:textSize="13sp" />
+
+        <Button
+            android:id="@+id/btn_retry_connection"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:backgroundTint="#7C6CF7"
+            android:text="🔄 Reconnect"
+            android:textColor="#FFFFFF"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/btn_fallback_camera"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:backgroundTint="#33334D"
+            android:text="📷 Standalone Mode"
+            android:textColor="#FFFFFF"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Top Action Bar -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="64dp"
+        android:layout_alignParentTop="true"
+        android:background="#66000000"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <TextView
+            android:id="@+id/tv_status_badge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="#332ECC71"
+            android:paddingStart="10dp"
+            android:paddingTop="4dp"
+            android:paddingEnd="10dp"
+            android:paddingBottom="4dp"
+            android:text="🟢 Host Connected"
+            android:textColor="#2ECC71"
+            android:textSize="12sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <Button
+            android:id="@+id/btn_enhancer"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:backgroundTint="#22223A"
+            android:text="✨ Enhance"
+            android:textColor="#EEEEF4"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btn_mirror"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_marginStart="8dp"
+            android:backgroundTint="#22223A"
+            android:text="🪞 Mirror"
+            android:textColor="#EEEEF4"
+            android:textSize="11sp" />
+
+        <Button
+            android:id="@+id/btn_zoom"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_marginStart="8dp"
+            android:backgroundTint="#22223A"
+            android:text="🔍 1.0x"
+            android:textColor="#EEEEF4"
+            android:textSize="11sp" />
+    </LinearLayout>
+
+    <!-- Bottom Controls Area -->
+    <LinearLayout
+        android:id="@+id/bottomControls"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
+        android:background="#88000000"
         android:gravity="center"
-        android:orientation="horizontal"
-        android:padding="24dp">
+        android:orientation="vertical"
+        android:paddingTop="12dp"
+        android:paddingBottom="24dp">
 
-        <Button
-            android:id="@+id/image_capture_button"
-            android:layout_width="110dp"
-            android:layout_height="60dp"
-            android:backgroundTint="#00E676"
-            android:text="Capture"
-            android:textColor="#FFFFFF" />
+        <!-- Face Selection Bar -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="24dp"
+            android:paddingEnd="24dp"
+            android:paddingBottom="12dp">
 
-        <Space
-            android:layout_width="20dp"
-            android:layout_height="wrap_content" />
+            <ImageView
+                android:id="@+id/img_source_preview"
+                android:layout_width="42dp"
+                android:layout_height="42dp"
+                android:background="#33334D"
+                android:scaleType="centerCrop"
+                android:contentDescription="Selected Source Face" />
 
-        <Button
-            android:id="@+id/video_capture_button"
-            android:layout_width="110dp"
-            android:layout_height="60dp"
-            android:backgroundTint="#FF1744"
-            android:text="Record"
-            android:textColor="#FFFFFF" />
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tv_source_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Swap Face: Default"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tap to change face from gallery"
+                    android:textColor="#9999AA"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <Button
+                android:id="@+id/btn_pick_face"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:backgroundTint="#7C6CF7"
+                android:text="📂 Pick Face"
+                android:textColor="#FFFFFF"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <!-- Shutter & Main Actions Row -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="84dp"
+            android:paddingStart="32dp"
+            android:paddingEnd="32dp">
+
+            <!-- Switch Mode / Direct Camera Toggle -->
+            <Button
+                android:id="@+id/btn_toggle_mode"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
+                android:backgroundTint="#22223A"
+                android:text="🎭"
+                android:textSize="18sp" />
+
+            <!-- Phone Camera Shutter Button (Centered) -->
+            <Button
+                android:id="@+id/image_capture_button"
+                android:layout_width="72dp"
+                android:layout_height="72dp"
+                android:layout_centerInParent="true"
+                android:backgroundTint="#FFFFFF"
+                android:contentDescription="Capture Photo"
+                android:elevation="6dp" />
+
+            <!-- Gallery Shortcut -->
+            <Button
+                android:id="@+id/btn_open_gallery"
+                android:layout_width="54dp"
+                android:layout_height="54dp"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:backgroundTint="#22223A"
+                android:text="🖼"
+                android:textSize="18sp" />
+        </RelativeLayout>
     </LinearLayout>
 
 </RelativeLayout>

@@ -40,6 +40,29 @@ if [ ! -d "$ANDROID_HOME" ]; then
     echo ""
 fi
 
+# Auto-start DeepFake Realtime streaming engine in background if not already running
+if ! nc -z 127.0.0.1 8080 2>/dev/null; then
+    echo "🎭 Starting DeepFake Realtime background engine..."
+    DEEPFAKE_DIR="/Users/ayush/Desktop/DeepFake/DeepFake_realtime"
+    if [ -f "$DEEPFAKE_DIR/.venv_mac/bin/python" ]; then
+        nohup "$DEEPFAKE_DIR/.venv_mac/bin/python" "$DEEPFAKE_DIR/main.py" > "$DEEPFAKE_DIR/app.log" 2>&1 &
+        (for i in {1..10}; do nc -z 127.0.0.1 8080 2>/dev/null && curl -s -X POST http://127.0.0.1:8080/api/start_camera >/dev/null 2>&1 && break; sleep 1; done) &
+    fi
+else
+    # Ensure camera capture is active for QEMU injection
+    curl -s -X POST http://127.0.0.1:8080/api/start_camera >/dev/null 2>&1 &
+fi
+
+# Auto-start AURA OS Autonomous Supervisor (Battery, Wi-Fi, Sensor, Camera Reverse Proxy, Location Sync)
+nohup "$DIR/tools/sec_daemon_supervisor.sh" > /tmp/sec_supervisor.log 2>&1 &
+
+# GPU Rendering Pipeline (Switch from host Apple Metal to SwiftShader Software Rendering)
+# -gpu host -> -gpu swiftshader_indirect
+export AURA_GPU_MODE="${AURA_GPU_MODE:-swiftshader_indirect}"
+
+# Host-side camera HAL & Adreno 750 GPU Interposition
+export DYLD_INSERT_LIBRARIES="/Users/ayush/Desktop/HEBB NETWORK/Emulator/tools/libsec_camera_provider.dylib:/Users/ayush/Desktop/HEBB NETWORK/Emulator/tools/libsec_gpu_interposer.dylib${DYLD_INSERT_LIBRARIES:+:$DYLD_INSERT_LIBRARIES}"
+
 # Build or run AURA OS GUI
 BINARY="target/release/aura-gui"
 
